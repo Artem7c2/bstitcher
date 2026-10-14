@@ -35,6 +35,15 @@ source .venv/bin/activate
 Other options: `--venv DIR`, `--python EXE`, `--dry-run` (print the commands only).
 Manual equivalent: `pip install -e ".[test]" -e plugins/bstitcher-bcf`.
 
+## Acquisition hint
+
+> **Set the tile overlap to about 10 %** when setting up the mapping job
+> (e.g. Bruker Esprit *Mapping → Overlap*). The stage positions are only
+> accurate to a few % (scale and rotation errors of several pixels per tile),
+> so registration needs shared image content between neighbours. With much
+> less overlap the matching becomes unreliable and tiles fall back to their
+> stage positions (visible seams); with much more, acquisition time is wasted.
+
 ## Usage
 
 ```bash
