@@ -53,16 +53,21 @@ jobs:
           $d = "dist/windows/bstitcher"
           & "$d/bstitcher.exe" --help
           if ($LASTEXITCODE -ne 0) { throw "bstitcher.exe --help failed" }
+          Write-Host "ok: --help"
           python -c "import numpy as np; from bstitcher.tiff_io import write_tiff; write_tiff('t.tif', np.arange(12, dtype=np.uint16).reshape(3, 4), metadata={'HV': 15.0})"
-          $info = & "$d/bstitcher.exe" info t.tif | ConvertFrom-Json
+          $info = (& "$d/bstitcher.exe" info t.tif) -join "`n" | ConvertFrom-Json
           if ($info.metadata.HV -ne 15.0) { throw "bstitcher.exe info returned wrong metadata" }
+          Write-Host "ok: info reads metadata"
           & "$d/bstitcher.exe" run nonexistent --out o 2>$null
-          if ($LASTEXITCODE -ne 1) { throw "error exit code expected" }
+          if ($LASTEXITCODE -ne 1) { throw "error exit code 1 expected, got $LASTEXITCODE" }
+          Write-Host "ok: error exit code"
           foreach ($exe in "$d/bstitcher-gui.exe", "dist/windows/bstitcher-gui-onefile.exe") {
             $p = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -PassThru -Wait
             if ($p.ExitCode -ne 0) { throw "$exe --smoke-test failed ($($p.ExitCode))" }
+            Write-Host "ok: $exe --smoke-test"
           }
           Write-Host "all executables OK"
+          exit 0  # the runner otherwise exits with the deliberate error code checked above
       - name: Package
         shell: pwsh
         run: |
