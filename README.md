@@ -108,6 +108,14 @@ docker run --rm -v "$PWD":/src -v /path/to/job:/fixture:ro \
            -e BSTITCHER_FIXTURE=/fixture bstitcher-dev pytest             # + real Bruker job
 ```
 
+Visual review of the tests (input / expected / actual / difference per scenario,
+needs matplotlib, which the Docker image has):
+
+```bash
+python tools/test_figures.py --out tmp/test_figures [--fixture /path/to/job]
+python tools/figures_page.py tmp/test_figures      # -> tmp/test_figures/index.html
+```
+
 Synthetic tests cut jittered tiles from a known image and require exact
 recovery of positions and pixel values; integration tests (marker
 `integration`) run the full pipeline on a real 2×2 Bruker job and compare
