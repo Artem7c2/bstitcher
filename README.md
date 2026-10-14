@@ -21,8 +21,19 @@ pip install bstitcher                 # core (Apache-2.0)
 pip install bstitcher-bcf             # Bruker .bcf reader plugin (GPL-3.0-or-later)
 ```
 
-From this repository: `pip install -e . -e plugins/bstitcher-bcf`, or use the
-Docker image: `docker build -f docker/Dockerfile -t bstitcher-dev .`
+From this repository, use the setup routine (Python ≥ 3.10):
+
+```bash
+git clone https://github.com/Artem7c2/bstitcher.git && cd bstitcher
+./setup.sh                  # .venv with core + bcf plugin, then checks the install
+./setup.sh --no-bcf         # Apache-2.0 core only (no GPL code)
+./setup.sh --dev            # editable install + test deps, runs the test suite
+./setup.sh --docker         # build the bstitcher-dev image and run the tests in it
+source .venv/bin/activate
+```
+
+Other options: `--venv DIR`, `--python EXE`, `--dry-run` (print the commands only).
+Manual equivalent: `pip install -e ".[test]" -e plugins/bstitcher-bcf`.
 
 ## Usage
 
