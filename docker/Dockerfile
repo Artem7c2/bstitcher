@@ -2,7 +2,7 @@
 # Build from the repo root:  docker build -f docker/Dockerfile -t bstitcher-dev .
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 libtk8.6 xvfb xauth && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
         "numpy==1.26.4" "scipy==1.13.1" "tifffile==2024.9.20" "imagecodecs==2024.9.22" \

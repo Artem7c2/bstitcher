@@ -1,0 +1,12 @@
+# Pinned Windows runtime + build dependencies (same versions as docker/Dockerfile).
+numpy==1.26.4
+scipy==1.13.1
+tifffile==2024.9.20
+imagecodecs==2024.9.22
+hyperspy==2.2.0
+rosettasciio==0.13.0
+exspy==0.2.1
+# h5py 3.16 Windows wheels call ucrtbase feholdexcept, which Wine 9.0 lacks (real Windows is fine).
+h5py==3.11.0
+pytest==8.3.3
+pyinstaller==6.10.0

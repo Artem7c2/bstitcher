@@ -1,0 +1,85 @@
+name: tests + Windows build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install -r packaging/windows/requirements-win.txt rasterio==1.4.3
+          python -m pip install --no-deps . ./plugins/bstitcher-bcf
+      - name: Tests (GUI tests need a display on Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y xvfb >/dev/null
+          Xvfb :99 -nolisten tcp & export DISPLAY=:99; sleep 1
+          python -m pytest -q -W ignore
+      - name: Tests
+        if: runner.os == 'Windows'
+        run: python -m pytest -q -W ignore
+
+  windows-exe:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install -r packaging/windows/requirements-win.txt
+          python -m pip install --no-deps . ./plugins/bstitcher-bcf
+      - name: Build
+        run: pyinstaller --noconfirm --log-level WARN --distpath dist/windows packaging/windows/bstitcher.spec
+      - name: Smoke test the executables
+        shell: pwsh
+        run: |
+          $d = "dist/windows/bstitcher"
+          & "$d/bstitcher.exe" --help
+          if ($LASTEXITCODE -ne 0) { throw "bstitcher.exe --help failed" }
+          python -c "import numpy as np; from bstitcher.tiff_io import write_tiff; write_tiff('t.tif', np.arange(12, dtype=np.uint16).reshape(3, 4), metadata={'HV': 15.0})"
+          $info = & "$d/bstitcher.exe" info t.tif | ConvertFrom-Json
+          if ($info.metadata.HV -ne 15.0) { throw "bstitcher.exe info returned wrong metadata" }
+          & "$d/bstitcher.exe" run nonexistent --out o 2>$null
+          if ($LASTEXITCODE -ne 1) { throw "error exit code expected" }
+          foreach ($exe in "$d/bstitcher-gui.exe", "dist/windows/bstitcher-gui-onefile.exe") {
+            $p = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -PassThru -Wait
+            if ($p.ExitCode -ne 0) { throw "$exe --smoke-test failed ($($p.ExitCode))" }
+          }
+          Write-Host "all executables OK"
+      - name: Package
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path pyproject.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
+          Compress-Archive -Path dist/windows/bstitcher -DestinationPath "dist/bstitcher-windows-$v.zip"
+          Copy-Item dist/windows/bstitcher-gui-onefile.exe "dist/bstitcher-gui-$v.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bstitcher-windows
+          path: |
+            dist/bstitcher-windows-*.zip
+            dist/bstitcher-gui-*.exe
+      - name: Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh release create "$GITHUB_REF_NAME" dist/bstitcher-windows-*.zip dist/bstitcher-gui-*.exe --generate-notes
+    permissions:
+      contents: write

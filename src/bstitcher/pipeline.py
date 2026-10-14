@@ -77,6 +77,9 @@ def convert_tiles(session_dir, tiles_dir, *, eds: bool = False, elements=None,
         log(f"[{n}/{len(files)}] {f.name} -> {len(written)} files")
     with open(os.path.join(str(tiles_dir), FAILED_TILES_FILE), "w") as fh:
         json.dump(failed, fh, indent=1)
+    if not records:
+        raise RuntimeError(f"none of the {len(files)} tiles could be read; first error "
+                           f"({failed[0]['file']}): {failed[0]['error']}")
     return records
 
 

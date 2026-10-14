@@ -151,6 +151,15 @@ def test_unreadable_tile_strict_raises(session, tmp_path):
         run_session(d, tmp_path / "out", strict=True, log=lambda *a: None)
 
 
+def test_all_tiles_unreadable_names_the_reason(tmp_path):
+    d = tmp_path / "s"
+    d.mkdir()
+    for i in (1, 2):
+        (d / f"Mapping_({i},1).npz").write_bytes(b"not a tile")
+    with pytest.raises(RuntimeError, match=r"none of the 2 tiles could be read.*Mapping_\(1,1\)\.npz"):
+        run_session(d, tmp_path / "out", log=lambda *a: None)
+
+
 def test_eds_with_varying_channel_count_and_calibration(tmp_path):
     """Bruker cuts spectra per tile and calibrates each acquisition: pad, never resample."""
     truth, recs, images, true_pos = make_mosaic(nx=3, ny=1, jitter=0, seed=12)

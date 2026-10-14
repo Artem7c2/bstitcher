@@ -1,4 +1,5 @@
 """setup.sh — install routine (checked via --dry-run; real installs are exercised in CI / docker)."""
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -8,7 +9,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SETUP = ROOT / "setup.sh"
 
-pytestmark = pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+pytestmark = pytest.mark.skipif(os.name == "nt" or shutil.which("bash") is None,
+                                reason="setup.sh is the Unix installer (needs bash)")
 
 
 def run(*args):

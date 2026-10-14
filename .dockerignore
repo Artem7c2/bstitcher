@@ -3,3 +3,5 @@ tmp
 **/*.egg-info
 .pytest_cache
 .venv
+dist
+trash

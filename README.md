@@ -53,6 +53,9 @@ bstitcher stitch  <tiles_dir>   --out <stitched_dir> [--modalities BSE elem_Fe E
 bstitcher info    <file.tif>                                 # metadata + georef as JSON
 ```
 
+Desktop window: `bstitcher-gui` (or `bstitcher gui`). Pick the mapping-job
+folder, tick the options, press **Run**; progress and the log appear in the window.
+
 ```python
 from bstitcher.pipeline import run_session
 res = run_session("Mapping_job/", "out/", eds=True)
@@ -75,6 +78,26 @@ Element maps are the EDS counts summed over `2 × FWHM` windows around each
 line (eXSpy `get_lines_intensity` defaults, bit-identical).  The window
 actually used (`integration_window_keV`) and the energy axis (`energy`) are
 stored in the metadata, so maps can be re-derived from the EDS cube.
+
+## Windows executables
+
+Download `bstitcher-windows-<version>.zip` (folder with `bstitcher.exe` for the
+command line and `bstitcher-gui.exe` for the window) or the single-file
+`bstitcher-gui-<version>.exe` from the GitHub releases / Actions artifacts. No
+Python installation is needed. The executables contain the GPL bcf plugin and
+are therefore distributed under **GPL-3.0-or-later** (licences in `_internal/licenses`).
+
+Building on Linux (Windows Python + PyInstaller under Wine, in Docker):
+
+```bash
+packaging/windows/build.sh                 # -> dist/windows/, dist/bstitcher-windows-<version>.zip
+packaging/windows/test.sh /path/to/job     # tests on Windows Python, runs the exe on the job,
+                                           # compares its output with the Linux pipeline (must be identical)
+```
+
+The GitHub workflow `.github/workflows/windows.yml` runs the tests on Linux and
+Windows, builds the executables on a Windows runner, smoke-tests them and attaches
+them to a release for tags `v*`.
 
 ## Stitching method
 

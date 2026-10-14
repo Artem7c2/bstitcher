@@ -58,11 +58,16 @@ def build_parser():
 
     info = sub.add_parser("info", help="print metadata / georeference of a bstitcher TIFF as JSON")
     info.add_argument("tiff")
+
+    sub.add_parser("gui", help="open the desktop window")
     return ap
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
+    if args.cmd == "gui":
+        from .gui import main as gui_main
+        return gui_main([])
     logging.getLogger("hyperspy").setLevel(logging.ERROR)
     try:
         if args.cmd == "run":
@@ -81,7 +86,7 @@ def main(argv=None) -> int:
             info = read_info(args.tiff)
             info["dtype"] = str(info["dtype"])
             print(json.dumps(info, indent=1))
-    except (FileNotFoundError, LookupError, ValueError) as e:
+    except (FileNotFoundError, LookupError, ValueError, RuntimeError) as e:
         print(f"bstitcher: error: {e}", file=sys.stderr)
         return 1
     return 0
