@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bstitcher"
+version = "0.1.0"
+description = "Lossless, georeferenced TIFF export and stitching of SEM BSE / EDS mapping tiles"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Artem Leichter" }]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+# Core dependencies are permissively licensed only (BSD / MIT).
+dependencies = [
+    "numpy>=1.24",
+    "tifffile>=2023.7.10",
+    "imagecodecs>=2023.3.16",
+]
+
+[project.optional-dependencies]
+# GPL-3.0 plugin: installing it makes the *combination* subject to GPL-3.0.
+bcf = ["bstitcher-bcf"]
+test = ["pytest>=7", "rasterio>=1.3"]
+
+[project.scripts]
+bstitcher = "bstitcher.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "plugins/bstitcher-bcf/tests"]
+markers = [
+    "integration: needs the real BCF fixture (BSTITCHER_FIXTURE) and the bstitcher-bcf plugin",
+]

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bstitcher-bcf"
+version = "0.1.0"
+description = "Bruker .bcf tile reader plugin for bstitcher (based on HyperSpy / RosettaSciIO / eXSpy)"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.10"
+authors = [{ name = "Artem Leichter" }]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
+dependencies = [
+    "bstitcher",
+    "rosettasciio>=0.4",
+    "hyperspy>=2.0",
+    "exspy>=0.2",
+]
+
+[project.entry-points."bstitcher.readers"]
+bcf = "bstitcher_bcf.reader:read_bcf"
+
+[tool.setuptools.packages.find]
+where = ["src"]
