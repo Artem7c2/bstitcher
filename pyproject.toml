@@ -15,11 +15,12 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-# Core dependencies are permissively licensed only (BSD / MIT).
+# Core dependencies are permissively licensed only (BSD / MIT / PSF-style).
 dependencies = [
     "numpy>=1.24",
     "tifffile>=2023.7.10",
     "imagecodecs>=2023.3.16",
+    "matplotlib>=3.5",
 ]
 
 [project.optional-dependencies]

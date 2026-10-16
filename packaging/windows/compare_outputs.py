@@ -51,6 +51,8 @@ def main(a, b) -> int:
         elif rel.suffix == ".json":
             if scrub(json.loads(pa.read_text())) != scrub(json.loads(pb.read_text())):
                 problems.append(f"{rel}: JSON content differs")
+        elif rel.suffix == ".png":
+            pass  # previews: font rasterisation may differ by platform; existence is checked above
         elif pa.read_bytes().replace(b"\r\n", b"\n") != pb.read_bytes().replace(b"\r\n", b"\n"):
             problems.append(f"{rel}: content differs")
     for p in problems:

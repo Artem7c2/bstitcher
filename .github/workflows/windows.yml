@@ -58,6 +58,9 @@ jobs:
           $info = (& "$d/bstitcher.exe" info t.tif) -join "`n" | ConvertFrom-Json
           if ($info.metadata.HV -ne 15.0) { throw "bstitcher.exe info returned wrong metadata" }
           Write-Host "ok: info reads metadata"
+          & "$d/bstitcher.exe" visualize . --out viz
+          if (-not (Test-Path viz/t.png)) { throw "bstitcher.exe visualize wrote no PNG" }
+          Write-Host "ok: visualize"
           & "$d/bstitcher.exe" run nonexistent --out o 2>$null
           if ($LASTEXITCODE -ne 1) { throw "error exit code 1 expected, got $LASTEXITCODE" }
           Write-Host "ok: error exit code"

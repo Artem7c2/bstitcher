@@ -22,14 +22,16 @@ def test_form_defaults():
     s, out, kw = gui.form_to_job(form())
     assert s == Path("/data/job1")
     assert out == Path("/data/job1_bstitcher")  # default output next to the session
-    assert kw == {"eds": False, "strict": False, "georef": "local", "seam": "center", "max_shift": None}
+    assert kw == {"eds": False, "strict": False, "georef": "local", "seam": "center", "max_shift": None,
+                  "visualize": True}
 
 
 def test_form_options():
     s, out, kw = gui.form_to_job(form(out="/tmp/o", eds=True, strict=True, georef="pixel", seam="overwrite",
-                                      max_shift=" 12 "))
+                                      max_shift=" 12 ", visualize=False))
     assert out == Path("/tmp/o")
-    assert kw == {"eds": True, "strict": True, "georef": "pixel", "seam": "overwrite", "max_shift": 12}
+    assert kw == {"eds": True, "strict": True, "georef": "pixel", "seam": "overwrite", "max_shift": 12,
+                  "visualize": False}
 
 
 @pytest.mark.parametrize("bad,msg", [({"session": ""}, "session folder"),

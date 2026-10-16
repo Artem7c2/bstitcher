@@ -6,6 +6,8 @@ Output layout::
     <out>/tiles/Mapping_(c,r)_BSE.tif, _elem_<El>.tif, [_EDS.tif]
     <out>/stitched/BSE.tif, elem_<El>.tif, [EDS.tif], tile_map.tif,
                    placements.csv, stitch_report.json
+    <out>/visualization_stitched/BSE.png, elem_<El>.png   previews (colour + scale bar)
+    <out>/tiles/failed_tiles.json   only if some tiles could not be read
 """
 from __future__ import annotations
 
@@ -24,6 +26,7 @@ from .readers import available_formats, get_reader
 from .stitch import compose, owner_map, stitch_layout, write_mosaic_streamed
 from .tiff_io import read_info, read_tiff, write_tiff
 from .tile import EDS_TILE_LEVEL, export_tile
+from .visualize import VIZ_DIR, visualize_stitched
 
 EDS_STITCHED_TILE = (128, 128)
 _TILE_KEYS = ("tile_index", "stage_um", "pixel_size_um", "source_file", "modality", "element",
@@ -55,7 +58,8 @@ def convert_tiles(session_dir, tiles_dir, *, eds: bool = False, elements=None,
     """Read every raw tile and export it as GeoTIFFs; returns TileRecords.
 
     Unreadable tiles (e.g. truncated by an aborted acquisition) are skipped and
-    listed in ``<tiles_dir>/failed_tiles.json`` unless ``strict`` is set.
+    listed in ``<tiles_dir>/failed_tiles.json`` unless ``strict`` is set.  The
+    file exists only when tiles failed; a stale one from an earlier run is removed.
     """
     files = find_tile_files(session_dir)
     if not files:
@@ -75,8 +79,12 @@ def convert_tiles(session_dir, tiles_dir, *, eds: bool = False, elements=None,
         written = export_tile(tile, tiles_dir, eds=eds, georef=georef)
         records.append(TileRecord(tile.index, tile.shape, tile.stage_um, tile.pixel_size_um, written))
         log(f"[{n}/{len(files)}] {f.name} -> {len(written)} files")
-    with open(os.path.join(str(tiles_dir), FAILED_TILES_FILE), "w") as fh:
-        json.dump(failed, fh, indent=1)
+    failed_path = os.path.join(str(tiles_dir), FAILED_TILES_FILE)
+    if failed:
+        with open(failed_path, "w") as fh:
+            json.dump(failed, fh, indent=1)
+    elif os.path.exists(failed_path):
+        os.remove(failed_path)
     if not records:
         raise RuntimeError(f"none of the {len(files)} tiles could be read; first error "
                            f"({failed[0]['file']}): {failed[0]['error']}")
@@ -161,9 +169,15 @@ def _geotransform(layout, georef):
     raise ValueError(f"unknown georef {georef!r}")
 
 
-def stitch_tiles(tiles_dir, stitched_dir, **kwargs) -> dict:
-    """Stitch exported tiles; returns ``{modality: path}``.  See :func:`_stitch`."""
-    return _stitch(tiles_dir, stitched_dir, **kwargs)[0]
+def stitch_tiles(tiles_dir, stitched_dir, *, viz_dir=None, log=print, **kwargs) -> dict:
+    """Stitch exported tiles; returns ``{modality: path}``.  See :func:`_stitch`.
+
+    With ``viz_dir`` PNG previews of the 2-D mosaics are written there as well.
+    """
+    outputs = _stitch(tiles_dir, stitched_dir, log=log, **kwargs)[0]
+    if viz_dir is not None:
+        visualize_stitched(stitched_dir, viz_dir, modalities=list(outputs), log=log)
+    return outputs
 
 
 def _stitch(tiles_dir, stitched_dir, *, modalities=None, georef: str = CRS_LOCAL,
@@ -253,12 +267,16 @@ def _stitch(tiles_dir, stitched_dir, *, modalities=None, georef: str = CRS_LOCAL
 
 def run_session(session_dir, out_dir, *, eds: bool = False, elements=None, all_images: bool = False,
                 georef: str = CRS_LOCAL, seam: str = "center", max_shift: int | None = None,
-                min_score: float = 0.5, smooth: int = 1, strict: bool = False, log=print) -> dict:
-    """Convert all raw tiles of a session and stitch them."""
+                min_score: float = 0.5, smooth: int = 1, strict: bool = False, visualize: bool = True,
+                log=print) -> dict:
+    """Convert all raw tiles of a session, stitch them and (``visualize``) write PNG previews."""
     out_dir = Path(out_dir)
     tiles_dir, stitched_dir = out_dir / "tiles", out_dir / "stitched"
     records = convert_tiles(session_dir, tiles_dir, eds=eds, elements=elements,
                             all_images=all_images, georef=georef, strict=strict, log=log)
     stitched, report = _stitch(tiles_dir, stitched_dir, georef=georef, seam=seam,
                                max_shift=max_shift, min_score=min_score, smooth=smooth, log=log)
-    return {"tiles": [r.files for r in records], "stitched": stitched, "report": report}
+    viz = visualize_stitched(stitched_dir, out_dir / VIZ_DIR, modalities=list(stitched), log=log) \
+        if visualize else {}
+    return {"tiles": [r.files for r in records], "stitched": stitched, "report": report,
+            "visualization": viz}

@@ -50,6 +50,7 @@ Manual equivalent: `pip install -e ".[test]" -e plugins/bstitcher-bcf`.
 bstitcher run  <session_dir> --out <out_dir> [--eds] [--georef local|pixel] [--elements Fe Mg ...]
 bstitcher convert <session_dir> --out <tiles_dir>          # tiles only
 bstitcher stitch  <tiles_dir>   --out <stitched_dir> [--modalities BSE elem_Fe EDS] [--seam center|overwrite]
+bstitcher visualize <stitched_dir> --out <png_dir> [--max-px 4000]  # PNG previews only
 bstitcher info    <file.tif>                                 # metadata + georef as JSON
 ```
 
@@ -72,7 +73,14 @@ out/stitched/BSE.tif, elem_<El>.tif, EDS.tif          same canvas + georeference
 out/stitched/tile_map.tif                which tile supplied each pixel (provenance)
 out/stitched/placements.csv              nominal vs. registered tile positions
 out/stitched/stitch_report.json          per-pair shift / NCC score / used flag
+out/visualization_stitched/BSE.png, elem_<El>.png     previews  [skip with --no-viz]
+out/tiles/failed_tiles.json              only written if tiles could not be read
 ```
+
+The PNG previews are grey scale with a colour bar (original values; contrast
+stretched to the 0.5–99.5 % percentiles, arrows mark clipping) and a scale
+bar.  Areas outside every tile are pale blue.  Mosaics larger than 4000 px
+are block-averaged for the preview; the TIFFs remain the data.
 
 Element maps are the EDS counts summed over `2 × FWHM` windows around each
 line (eXSpy `get_lines_intensity` defaults, bit-identical).  The window

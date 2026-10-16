@@ -56,6 +56,36 @@ def test_run_session_outputs(session, tmp_path):
     assert {"BSE.tif", "elem_Fe.tif", "elem_Mg.tif", "EDS.tif", "tile_map.tif",
             "placements.csv", "stitch_report.json"} <= st
     assert set(res["stitched"]) >= {"BSE", "elem_Fe", "elem_Mg", "EDS"}
+    # PNG previews of the 2-D mosaics (not of the EDS cube or the tile map)
+    assert sorted(p.name for p in (out / "visualization_stitched").iterdir()) == [
+        "BSE.png", "elem_Fe.png", "elem_Mg.png"]
+    assert sorted(res["visualization"]) == ["BSE", "elem_Fe", "elem_Mg"]
+
+
+def test_no_visualization_when_disabled(session, tmp_path):
+    d, *_ = session
+    res = run_session(d, tmp_path / "out", visualize=False, log=lambda *a: None)
+    assert not (tmp_path / "out" / "visualization_stitched").exists()
+    assert res["visualization"] == {}
+
+
+def test_no_error_file_without_errors(session, tmp_path):
+    d, *_ = session
+    res = run_session(d, tmp_path / "out", log=lambda *a: None)
+    assert not (tmp_path / "out" / "tiles" / "failed_tiles.json").exists()
+    assert res["report"]["failed_tiles"] == []
+
+
+def test_stale_error_file_removed_on_clean_rerun(session, tmp_path):
+    d, *_ = session
+    bad = d / "Mapping_(9,9).npz"
+    bad.write_bytes(b"truncated acquisition")
+    run_session(d, tmp_path / "out", log=lambda *a: None)
+    assert (tmp_path / "out" / "tiles" / "failed_tiles.json").exists()
+    bad.rename(tmp_path / "moved_away.npz")
+    res = run_session(d, tmp_path / "out", log=lambda *a: None)
+    assert not (tmp_path / "out" / "tiles" / "failed_tiles.json").exists()
+    assert res["report"]["failed_tiles"] == []
 
 
 def test_stitched_positions_and_lossless_pixels(session, tmp_path):
@@ -142,6 +172,7 @@ def test_unreadable_tile_is_skipped_and_reported(session, tmp_path):
     assert res["report"]["failed_tiles"][0]["error"]
     rep = json.loads((tmp_path / "out" / "stitched" / "stitch_report.json").read_text())
     assert rep["failed_tiles"][0]["file"] == "Mapping_(9,9).npz"
+    assert (tmp_path / "out" / "tiles" / "failed_tiles.json").exists()
 
 
 def test_unreadable_tile_strict_raises(session, tmp_path):

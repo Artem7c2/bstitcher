@@ -51,7 +51,8 @@ def form_to_job(values: dict):
     if georef not in GEOREFS or seam not in SEAMS:
         raise ValueError(f"Unknown georef {georef!r} or seam {seam!r}.")
     kwargs = {"eds": bool(values.get("eds")), "strict": bool(values.get("strict")),
-              "georef": georef, "seam": seam, "max_shift": max_shift}
+              "georef": georef, "seam": seam, "max_shift": max_shift,
+              "visualize": bool(values.get("visualize", True))}
     return Path(session), Path(out) if out else default_out(session), kwargs
 
 
@@ -125,6 +126,7 @@ class App:
             "session": tk.StringVar(), "out": tk.StringVar(), "eds": tk.BooleanVar(value=False),
             "strict": tk.BooleanVar(value=False), "georef": tk.StringVar(value="local"),
             "seam": tk.StringVar(value="center"), "max_shift": tk.StringVar(value=""),
+            "visualize": tk.BooleanVar(value=True),
         }
         self.status = tk.StringVar(value="Choose a mapping-job folder.")
 
@@ -161,6 +163,9 @@ class App:
                                                                          pady=(6, 0))
         ttk.Label(opt, text="empty = auto (5 % of the tile size); 0 = stage positions only",
                   foreground="gray").grid(row=3, column=2, columnspan=2, sticky="w", pady=(6, 0))
+        ttk.Checkbutton(opt, text="PNG previews with colour bar and scale bar (visualization_stitched)",
+                        variable=self.vars["visualize"]).grid(row=4, column=0, columnspan=4, sticky="w",
+                                                              pady=(6, 0))
 
         bar = ttk.Frame(f)
         bar.grid(row=4, column=0, columnspan=3, sticky="ew")
@@ -235,6 +240,8 @@ class App:
                 self.status.set(f"Converting tile {p[0]} of {p[1]}…")
             elif line.startswith("stitched "):
                 self.status.set(f"Stitching… {line.split(':')[0][9:]}")
+            elif line.startswith("preview "):
+                self.status.set(f"Writing previews… {line.split(':')[0][8:]}")
         if job.is_alive():
             self.root.after(100, self._poll)
             return

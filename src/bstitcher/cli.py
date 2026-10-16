@@ -1,14 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Command line interface: ``bstitcher run|convert|stitch|info``."""
+"""Command line interface: ``bstitcher run|convert|stitch|visualize|info``."""
 from __future__ import annotations
 
 import argparse
 import json
 import logging
+import os
 import sys
 
 from .pipeline import convert_tiles, run_session, stitch_tiles
 from .tiff_io import read_info
+from .visualize import MAX_PX, VIZ_DIR, visualize_stitched
 
 
 def _stitch_args(p):
@@ -20,6 +22,8 @@ def _stitch_args(p):
     p.add_argument("--min-score", type=float, default=0.5,
                    help="minimum NCC for a pair to be trusted")
     p.add_argument("--smooth", type=int, default=1, help="box-filter radius used for matching only")
+    p.add_argument("--no-viz", action="store_true",
+                   help=f"skip the PNG previews (default: written to {VIZ_DIR}/)")
 
 
 def _common(p):
@@ -56,6 +60,12 @@ def build_parser():
     _common(st)
     _stitch_args(st)
 
+    viz = sub.add_parser("visualize", help="PNG previews (grey scale, colour bar, scale bar) of stitched mosaics")
+    viz.add_argument("stitched")
+    viz.add_argument("--out", required=True)
+    viz.add_argument("--modalities", nargs="+", default=None)
+    viz.add_argument("--max-px", type=int, default=MAX_PX, help="longest side of a preview, px")
+
     info = sub.add_parser("info", help="print metadata / georeference of a bstitcher TIFF as JSON")
     info.add_argument("tiff")
 
@@ -74,14 +84,17 @@ def main(argv=None) -> int:
             run_session(args.session, args.out, eds=args.eds, elements=args.elements,
                         all_images=args.all_images, georef=args.georef, seam=args.seam,
                         max_shift=args.max_shift, min_score=args.min_score, smooth=args.smooth,
-                        strict=args.strict)
+                        strict=args.strict, visualize=not args.no_viz)
         elif args.cmd == "convert":
             convert_tiles(args.session, args.out, eds=args.eds, elements=args.elements,
                           all_images=args.all_images, georef=args.georef)
         elif args.cmd == "stitch":
             stitch_tiles(args.tiles, args.out, modalities=args.modalities, georef=args.georef,
                          seam=args.seam, max_shift=args.max_shift, min_score=args.min_score,
-                         smooth=args.smooth)
+                         smooth=args.smooth,
+                         viz_dir=None if args.no_viz else os.path.join(args.out, VIZ_DIR))
+        elif args.cmd == "visualize":
+            visualize_stitched(args.stitched, args.out, modalities=args.modalities, max_px=args.max_px)
         elif args.cmd == "info":
             info = read_info(args.tiff)
             info["dtype"] = str(info["dtype"])
