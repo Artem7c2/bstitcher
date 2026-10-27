@@ -6,6 +6,7 @@ integration windows (same defaults as ``EDSSpectrum.get_lines_intensity``).
 """
 from __future__ import annotations
 
+import logging
 import os
 
 import numpy as np
@@ -14,6 +15,15 @@ from bstitcher.metadata import jsonable, parse_tile_index
 from bstitcher.tile import Tile, integrate_windows
 
 WINDOW_WIDTH = 2.0  # integration window = WINDOW_WIDTH * FWHM of the line (exspy default)
+
+
+def _not_numba_notice(record) -> bool:
+    # HyperSpy warns on import when the optional Numba accelerator is missing.  Reading
+    # .bcf files does not use Numba, so the notice only alarms users; others pass.
+    return not record.getMessage().startswith("Numba is not installed")
+
+
+logging.getLogger("hyperspy.decorators").addFilter(_not_numba_notice)
 
 
 def _split_signals(signals):

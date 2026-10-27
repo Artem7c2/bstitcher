@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bstitcher-bcf"
-version = "0.1.0"
+version = "0.1.1"
 description = "Bruker .bcf tile reader plugin for bstitcher (based on HyperSpy / RosettaSciIO / eXSpy)"
 license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.10"
