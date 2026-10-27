@@ -58,3 +58,18 @@ def test_info_command(session, tmp_path, capsys):
 def test_bad_session_returns_error(tmp_path, capsys):
     assert main(["run", str(tmp_path), "--out", str(tmp_path / "o")]) == 1
     assert "no Mapping_" in capsys.readouterr().err
+
+
+def test_run_bcf_needs_eds(session, tmp_path, capsys):
+    d, *_ = session
+    assert main(["run", str(d), "--out", str(tmp_path / "o"), "--bcf"]) == 1
+    assert "--eds" in capsys.readouterr().err
+
+
+def test_export_bcf_command_is_wired(monkeypatch, tmp_path):
+    from bstitcher import readers
+    calls = []
+    monkeypatch.setitem(readers._MOSAIC_WRITERS, "bcf",
+                        lambda stitched_dir, template, out=None, log=print: calls.append((stitched_dir, template, out)))
+    assert main(["export-bcf", str(tmp_path / "st"), "--template", "t.bcf", "--out", str(tmp_path / "x.bcf")]) == 0
+    assert calls == [(str(tmp_path / "st"), "t.bcf", str(tmp_path / "x.bcf"))]

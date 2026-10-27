@@ -14,6 +14,7 @@ import os
 from importlib.metadata import entry_points
 
 _READERS: dict = {}
+_MOSAIC_WRITERS: dict = {}  # name -> callable(stitched_dir, template, out=None, log=print) -> path
 _LOAD_ERRORS: dict = {}  # extension -> "ExcType: message" of a plugin that failed to import
 _LOADED = False
 
@@ -27,6 +28,11 @@ def _load_entry_points() -> None:
     if _LOADED:
         return
     eps = entry_points(group="bstitcher.readers")  # if this raises, the next call retries
+    for ep in entry_points(group="bstitcher.mosaic_writers"):
+        try:
+            _MOSAIC_WRITERS.setdefault(ep.name.lower(), ep.load())
+        except Exception as e:
+            _LOAD_ERRORS[f"{ep.name} writer"] = f"{type(e).__name__}: {e}"
     for ep in eps:
         name = ep.name.lower()
         if name in _READERS:
@@ -63,3 +69,13 @@ def get_reader(path):
 def available_formats() -> list:
     _load_entry_points()
     return sorted(_READERS)
+
+
+def get_mosaic_writer(name: str):
+    """Exporter of a stitched mosaic to another format, e.g. ``"bcf"`` (from bstitcher-bcf)."""
+    _load_entry_points()
+    try:
+        return _MOSAIC_WRITERS[name.lower()]
+    except KeyError:
+        raise LookupError(f"no '{name}' mosaic writer installed (the stitched .bcf export is provided by "
+                          "the bstitcher-bcf package)" + describe_errors()) from None

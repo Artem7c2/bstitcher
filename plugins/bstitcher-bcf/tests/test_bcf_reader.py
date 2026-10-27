@@ -22,6 +22,12 @@ def test_reader_is_registered_via_entry_point():
     assert get_reader("x/Mapping_(1,1).BCF") is read_bcf
 
 
+def test_stitched_bcf_writer_is_registered_via_entry_point():
+    from bstitcher.readers import get_mosaic_writer
+    from bstitcher_bcf.writer import write_stitched_bcf
+    assert get_mosaic_writer("bcf") is write_stitched_bcf
+
+
 def test_tile_geometry_and_types(tile):
     assert isinstance(tile, Tile)
     assert tile.index == (2, 1)

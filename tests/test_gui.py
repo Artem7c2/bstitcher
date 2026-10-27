@@ -23,7 +23,7 @@ def test_form_defaults():
     assert s == Path("/data/job1")
     assert out == Path("/data/job1_bstitcher")  # default output next to the session
     assert kw == {"eds": False, "strict": False, "georef": "local", "seam": "center", "max_shift": None,
-                  "visualize": True}
+                  "visualize": True, "bcf": False}
 
 
 def test_form_options():
@@ -31,7 +31,7 @@ def test_form_options():
                                       max_shift=" 12 ", visualize=False))
     assert out == Path("/tmp/o")
     assert kw == {"eds": True, "strict": True, "georef": "pixel", "seam": "overwrite", "max_shift": 12,
-                  "visualize": False}
+                  "visualize": False, "bcf": False}
 
 
 @pytest.mark.parametrize("bad,msg", [({"session": ""}, "session folder"),
@@ -121,6 +121,12 @@ def test_window_shows_form_error():
         assert app.job is None
     finally:
         app.destroy()
+
+
+def test_form_bcf_needs_eds():
+    with pytest.raises(ValueError, match="EDS"):
+        gui.form_to_job(form(bcf=True))
+    assert gui.form_to_job(form(bcf=True, eds=True))[2]["bcf"] is True
 
 
 def test_check_readers_in_worker_thread(tmp_path):

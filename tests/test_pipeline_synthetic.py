@@ -218,3 +218,34 @@ def test_eds_with_varying_channel_count_and_calibration(tmp_path):
         assert not eds[y:y + h, x:x + w, c:][m].any()  # padding is zero
     ea = res["report"]["eds_energy_axis"]
     assert ea["uniform"] is False and ea["max_deviation_eV"] == pytest.approx(0.0001 * 26 * 1000, rel=0.05)
+
+
+def test_bcf_export_needs_eds(session, tmp_path):
+    d, *_ = session
+    with pytest.raises(ValueError, match="needs the EDS cube"):
+        run_session(d, tmp_path / "out", bcf=True, log=lambda *a: None)
+    assert not (tmp_path / "out").exists()  # refused before any work
+
+
+def test_bcf_export_calls_the_mosaic_writer_plugin(session, tmp_path, monkeypatch):
+    from bstitcher import readers
+    d, *_ = session
+    (d / "Mapping_(9,9).npz").write_bytes(b"unreadable tile is not the template")
+    calls = []
+
+    def fake_writer(stitched_dir, template, log=print):
+        calls.append((stitched_dir, template))
+        return str(stitched_dir) + "/stitched.bcf"
+    monkeypatch.setitem(readers._MOSAIC_WRITERS, "bcf", fake_writer)
+    res = run_session(d, tmp_path / "out", eds=True, bcf=True, visualize=False, log=lambda *a: None)
+    assert calls == [(tmp_path / "out" / "stitched", d / "Mapping_(1,1).npz")]
+    assert res["bcf"].endswith("stitched.bcf")
+
+
+def test_bcf_export_without_plugin_names_it(session, tmp_path, monkeypatch):
+    from bstitcher import readers
+    d, *_ = session
+    monkeypatch.setattr(readers, "_MOSAIC_WRITERS", {})
+    monkeypatch.setattr(readers, "_LOADED", True)
+    with pytest.raises(LookupError, match="bstitcher-bcf"):
+        run_session(d, tmp_path / "out", eds=True, bcf=True, log=lambda *a: None)

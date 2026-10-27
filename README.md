@@ -50,6 +50,8 @@ Manual equivalent: `pip install -e ".[test]" -e plugins/bstitcher-bcf`.
 bstitcher run  <session_dir> --out <out_dir> [--eds] [--georef local|pixel] [--elements Fe Mg ...]
 bstitcher convert <session_dir> --out <tiles_dir>          # tiles only
 bstitcher stitch  <tiles_dir>   --out <stitched_dir> [--modalities BSE elem_Fe EDS] [--seam center|overwrite]
+bstitcher run  <session_dir> --out <out_dir> --eds --bcf    # + stitched/stitched.bcf (one Bruker file)
+bstitcher export-bcf <stitched_dir> --template <tile.bcf>   # stitched folder -> stitched.bcf
 bstitcher visualize <stitched_dir> --out <png_dir> [--max-px 4000]  # PNG previews only
 bstitcher info    <file.tif>                                 # metadata + georef as JSON
 ```
@@ -75,7 +77,16 @@ out/stitched/placements.csv              nominal vs. registered tile positions
 out/stitched/stitch_report.json          per-pair shift / NCC score / used flag
 out/visualization_stitched/BSE.png, elem_<El>.png     previews  [skip with --no-viz]
 out/tiles/failed_tiles.json              only written if tiles could not be read
+out/stitched/stitched.bcf                whole mosaic as one Bruker .bcf  [--eds --bcf]
 ```
+
+**Stitched BCF** (`--bcf`, GPL plugin): the stitched spectrum map (lossless
+counts), the stitched BSE image and the first tile's header (instrument,
+detector, elements), with image size, pixel size, stage position (mosaic
+centre), energy calibration (reference of the stitched cube) and sum spectrum
+adapted.  HyperSpy / RosettaSciIO read it back identically (tested).  Opening
+in Bruker Esprit is being verified; pixels outside every tile are stored with
+zero counts.
 
 The PNG previews are grey scale with a colour bar (original values; contrast
 stretched to the 0.5–99.5 % percentiles, arrows mark clipping) and a scale

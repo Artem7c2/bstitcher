@@ -22,5 +22,8 @@ dependencies = [
 [project.entry-points."bstitcher.readers"]
 bcf = "bstitcher_bcf.reader:read_bcf"
 
+[project.entry-points."bstitcher.mosaic_writers"]
+bcf = "bstitcher_bcf.writer:write_stitched_bcf"
+
 [tool.setuptools.packages.find]
 where = ["src"]

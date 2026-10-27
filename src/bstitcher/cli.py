@@ -42,6 +42,8 @@ def build_parser():
     run.add_argument("--elements", nargs="+", default=None, help="override the job's element list")
     run.add_argument("--all-images", action="store_true", help="export every image channel")
     run.add_argument("--strict", action="store_true", help="abort on unreadable tiles instead of skipping")
+    run.add_argument("--bcf", action="store_true",
+                     help="also write stitched/stitched.bcf, one Bruker file of the mosaic (needs --eds)")
     _common(run)
     _stitch_args(run)
 
@@ -66,6 +68,11 @@ def build_parser():
     viz.add_argument("--modalities", nargs="+", default=None)
     viz.add_argument("--max-px", type=int, default=MAX_PX, help="longest side of a preview, px")
 
+    xb = sub.add_parser("export-bcf", help="write a stitched folder (with EDS.tif) as one Bruker .bcf")
+    xb.add_argument("stitched")
+    xb.add_argument("--template", required=True, help="one raw tile .bcf of the same mapping job")
+    xb.add_argument("--out", default=None, help="default: <stitched>/stitched.bcf")
+
     info = sub.add_parser("info", help="print metadata / georeference of a bstitcher TIFF as JSON")
     info.add_argument("tiff")
 
@@ -84,7 +91,7 @@ def main(argv=None) -> int:
             run_session(args.session, args.out, eds=args.eds, elements=args.elements,
                         all_images=args.all_images, georef=args.georef, seam=args.seam,
                         max_shift=args.max_shift, min_score=args.min_score, smooth=args.smooth,
-                        strict=args.strict, visualize=not args.no_viz)
+                        strict=args.strict, visualize=not args.no_viz, bcf=args.bcf)
         elif args.cmd == "convert":
             convert_tiles(args.session, args.out, eds=args.eds, elements=args.elements,
                           all_images=args.all_images, georef=args.georef)
@@ -93,6 +100,9 @@ def main(argv=None) -> int:
                          seam=args.seam, max_shift=args.max_shift, min_score=args.min_score,
                          smooth=args.smooth,
                          viz_dir=None if args.no_viz else os.path.join(args.out, VIZ_DIR))
+        elif args.cmd == "export-bcf":
+            from .readers import get_mosaic_writer
+            get_mosaic_writer("bcf")(args.stitched, args.template, out=args.out)
         elif args.cmd == "visualize":
             visualize_stitched(args.stitched, args.out, modalities=args.modalities, max_px=args.max_px)
         elif args.cmd == "info":

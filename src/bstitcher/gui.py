@@ -51,9 +51,11 @@ def form_to_job(values: dict):
     seam = values.get("seam", "center")
     if georef not in GEOREFS or seam not in SEAMS:
         raise ValueError(f"Unknown georef {georef!r} or seam {seam!r}.")
+    if values.get("bcf") and not values.get("eds"):
+        raise ValueError("The stitched BCF needs the EDS spectrum cube: tick 'Export the full EDS spectrum cube'.")
     kwargs = {"eds": bool(values.get("eds")), "strict": bool(values.get("strict")),
               "georef": georef, "seam": seam, "max_shift": max_shift,
-              "visualize": bool(values.get("visualize", True))}
+              "visualize": bool(values.get("visualize", True)), "bcf": bool(values.get("bcf"))}
     return Path(session), Path(out) if out else default_out(session), kwargs
 
 
@@ -132,7 +134,7 @@ class App:
             "session": tk.StringVar(), "out": tk.StringVar(), "eds": tk.BooleanVar(value=False),
             "strict": tk.BooleanVar(value=False), "georef": tk.StringVar(value="local"),
             "seam": tk.StringVar(value="center"), "max_shift": tk.StringVar(value=""),
-            "visualize": tk.BooleanVar(value=True),
+            "visualize": tk.BooleanVar(value=True), "bcf": tk.BooleanVar(value=False),
         }
         self.status = tk.StringVar(value="Choose a mapping-job folder.")
 
@@ -172,6 +174,8 @@ class App:
         ttk.Checkbutton(opt, text="PNG previews with colour bar and scale bar (visualization_stitched)",
                         variable=self.vars["visualize"]).grid(row=4, column=0, columnspan=4, sticky="w",
                                                               pady=(6, 0))
+        ttk.Checkbutton(opt, text="Stitched Bruker .bcf of the whole mosaic (needs the EDS cube; large)",
+                        variable=self.vars["bcf"]).grid(row=5, column=0, columnspan=4, sticky="w")
 
         bar = ttk.Frame(f)
         bar.grid(row=4, column=0, columnspan=3, sticky="ew")

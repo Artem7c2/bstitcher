@@ -22,7 +22,7 @@ from . import __version__
 from .georef import CRS_LOCAL, CRS_PIXEL, physical_geotransform, pixel_geotransform
 from .layout import TileRecord
 from .metadata import parse_tile_index
-from .readers import available_formats, describe_errors, get_reader
+from .readers import available_formats, describe_errors, get_mosaic_writer, get_reader
 from .stitch import compose, owner_map, stitch_layout, write_mosaic_streamed
 from .tiff_io import read_info, read_tiff, write_tiff
 from .tile import EDS_TILE_LEVEL, export_tile
@@ -271,8 +271,14 @@ def _stitch(tiles_dir, stitched_dir, *, modalities=None, georef: str = CRS_LOCAL
 def run_session(session_dir, out_dir, *, eds: bool = False, elements=None, all_images: bool = False,
                 georef: str = CRS_LOCAL, seam: str = "center", max_shift: int | None = None,
                 min_score: float = 0.5, smooth: int = 1, strict: bool = False, visualize: bool = True,
-                log=print) -> dict:
-    """Convert all raw tiles of a session, stitch them and (``visualize``) write PNG previews."""
+                bcf: bool = False, log=print) -> dict:
+    """Convert all raw tiles of a session, stitch them and (``visualize``) write PNG previews.
+
+    ``bcf``: also write ``stitched/stitched.bcf`` (needs ``eds`` and the bstitcher-bcf plugin).
+    """
+    if bcf and not eds:
+        raise ValueError("the stitched BCF needs the EDS cube: add --eds")
+    bcf_writer = get_mosaic_writer("bcf") if bcf else None
     out_dir = Path(out_dir)
     tiles_dir, stitched_dir = out_dir / "tiles", out_dir / "stitched"
     records = convert_tiles(session_dir, tiles_dir, eds=eds, elements=elements,
@@ -281,5 +287,10 @@ def run_session(session_dir, out_dir, *, eds: bool = False, elements=None, all_i
                                max_shift=max_shift, min_score=min_score, smooth=smooth, log=log)
     viz = visualize_stitched(stitched_dir, out_dir / VIZ_DIR, modalities=list(stitched), log=log) \
         if visualize else {}
-    return {"tiles": [r.files for r in records], "stitched": stitched, "report": report,
-            "visualization": viz}
+    res = {"tiles": [r.files for r in records], "stitched": stitched, "report": report,
+           "visualization": viz}
+    if bcf_writer is not None:
+        failed = {f["file"] for f in report["failed_tiles"]}
+        template = next(f for f in find_tile_files(session_dir) if f.name not in failed)
+        res["bcf"] = bcf_writer(stitched_dir, template, log=log)
+    return res
