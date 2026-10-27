@@ -14,6 +14,7 @@ import os
 from importlib.metadata import entry_points
 
 _READERS: dict = {}
+_LOAD_ERRORS: dict = {}  # extension -> "ExcType: message" of a plugin that failed to import
 _LOADED = False
 
 
@@ -25,9 +26,27 @@ def _load_entry_points() -> None:
     global _LOADED
     if _LOADED:
         return
+    eps = entry_points(group="bstitcher.readers")  # if this raises, the next call retries
+    for ep in eps:
+        name = ep.name.lower()
+        if name in _READERS:
+            continue
+        try:
+            _READERS[name] = ep.load()
+        except Exception as e:  # keep the reason: "no reader" alone is undiagnosable
+            _LOAD_ERRORS[name] = f"{type(e).__name__}: {e}"
     _LOADED = True
-    for ep in entry_points(group="bstitcher.readers"):
-        _READERS.setdefault(ep.name.lower(), ep.load())
+
+
+def reader_errors() -> dict:
+    """``{extension: error}`` for installed reader plugins that failed to load."""
+    _load_entry_points()
+    return dict(_LOAD_ERRORS)
+
+
+def describe_errors() -> str:
+    errs = reader_errors()
+    return "".join(f"; the .{k} reader failed to load: {v}" for k, v in sorted(errs.items()))
 
 
 def get_reader(path):
@@ -38,7 +57,7 @@ def get_reader(path):
     except KeyError:
         raise LookupError(
             f"no reader for '.{ext}' files; installed: {sorted(_READERS) or 'none'} "
-            "(the Bruker .bcf reader is provided by the bstitcher-bcf package)") from None
+            "(the Bruker .bcf reader is provided by the bstitcher-bcf package)" + describe_errors()) from None
 
 
 def available_formats() -> list:

@@ -68,6 +68,11 @@ jobs:
             $p = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -PassThru -Wait
             if ($p.ExitCode -ne 0) { throw "$exe --smoke-test failed ($($p.ExitCode))" }
             Write-Host "ok: $exe --smoke-test"
+            # the .bcf reader must load from a worker thread, as it does when the window runs a job
+            $p = Start-Process -FilePath $exe -ArgumentList "--check-readers", "readers.json" -PassThru -Wait
+            Get-Content readers.json
+            if ($p.ExitCode -ne 0) { throw "$exe --check-readers: .bcf reader not available ($($p.ExitCode))" }
+            Write-Host "ok: $exe --check-readers"
           }
           Write-Host "all executables OK"
           exit 0  # the runner otherwise exits with the deliberate error code checked above

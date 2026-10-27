@@ -22,7 +22,7 @@ from . import __version__
 from .georef import CRS_LOCAL, CRS_PIXEL, physical_geotransform, pixel_geotransform
 from .layout import TileRecord
 from .metadata import parse_tile_index
-from .readers import available_formats, get_reader
+from .readers import available_formats, describe_errors, get_reader
 from .stitch import compose, owner_map, stitch_layout, write_mosaic_streamed
 from .tiff_io import read_info, read_tiff, write_tiff
 from .tile import EDS_TILE_LEVEL, export_tile
@@ -61,6 +61,9 @@ def convert_tiles(session_dir, tiles_dir, *, eds: bool = False, elements=None,
     listed in ``<tiles_dir>/failed_tiles.json`` unless ``strict`` is set.  The
     file exists only when tiles failed; a stale one from an earlier run is removed.
     """
+    if not available_formats():
+        raise LookupError("no tile reader is available (install the bstitcher-bcf plugin for .bcf)"
+                          + describe_errors())
     files = find_tile_files(session_dir)
     if not files:
         raise FileNotFoundError(f"no Mapping_(c,r).<{'|'.join(available_formats())}> tiles in "

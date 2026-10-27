@@ -123,6 +123,30 @@ def test_window_shows_form_error():
         app.destroy()
 
 
+def test_check_readers_in_worker_thread(tmp_path):
+    """``--check-readers FILE`` loads the readers in a background thread, like a job does."""
+    import json
+    from bstitcher.readers import available_formats
+    out = tmp_path / "check.json"
+    rc = gui.main(["--check-readers", str(out)])
+    res = json.loads(out.read_text())
+    assert res["formats"] == available_formats()
+    assert rc == (0 if "bcf" in res["formats"] else 1)
+    assert "errors" in res
+
+
+def test_job_reports_traceback_for_unexpected_errors(monkeypatch, tmp_path):
+    def boom(*a, **k):
+        raise KeyError("deep inside")
+    monkeypatch.setattr(gui, "run_session", boom)
+    job = gui.Job(tmp_path, tmp_path / "o", {})
+    job.start()
+    job.join()
+    assert job.error == "KeyError: 'deep inside'"
+    lines = "\n".join(job.drain())
+    assert "Traceback" in lines and "boom" in lines
+
+
 def test_cli_has_gui_command():
     from bstitcher.cli import build_parser
     assert build_parser().parse_args(["gui"]).cmd == "gui"

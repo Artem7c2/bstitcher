@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 import threading
+import traceback
 from pathlib import Path
 
 from . import __version__
@@ -87,7 +88,12 @@ class Job(threading.Thread):
         try:
             self.result = run_session(self.session, self.out, log=self.q.put, **self.kwargs)
         except Exception as e:  # shown to the user, never raised in the thread
-            self.error = f"{type(e).__name__}: {e}" if not isinstance(e, (FileNotFoundError, ValueError)) else str(e)
+            if type(e) in (FileNotFoundError, ValueError, LookupError, RuntimeError):  # our own messages
+                self.error = str(e)
+            else:  # unexpected: the traceback goes to the log so it can be reported
+                self.error = f"{type(e).__name__}: {e}"
+                for line in traceback.format_exc().rstrip().splitlines():
+                    self.q.put(line)
         finally:
             logging.getLogger().removeHandler(handler)
 
@@ -257,6 +263,28 @@ class App:
             self.open_btn.configure(state="normal")
 
 
+def check_readers(path) -> int:
+    """Load the readers in a worker thread (as a job does); write ``{formats, errors}`` JSON to path.
+
+    Diagnostic for packaged builds (``bstitcher-gui --check-readers out.json``); exit 0 if
+    the .bcf reader is usable.
+    """
+    import json
+    from . import readers
+    res = {}
+
+    def work():
+        try:
+            res.update(formats=readers.available_formats(), errors=readers.reader_errors())
+        except Exception:
+            res.update(formats=[], errors={"*": traceback.format_exc()})
+    t = threading.Thread(target=work)
+    t.start()
+    t.join()
+    Path(path).write_text(json.dumps(res, indent=1))
+    return 0 if "bcf" in res["formats"] else 1
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     # A windowed Windows executable has no console: stdout/stderr are None.
@@ -264,7 +292,18 @@ def main(argv=None) -> int:
         if getattr(sys, name) is None:
             setattr(sys, name, open(os.devnull, "w"))
     logging.getLogger("hyperspy").setLevel(logging.ERROR)
+    if "--check-readers" in argv:
+        return check_readers(argv[argv.index("--check-readers") + 1])
+    from .readers import available_formats, describe_errors
+    try:  # import the readers (HyperSpy & co.) here in the main thread, not first inside a job
+        formats, problem = available_formats(), describe_errors()
+    except Exception as e:
+        formats, problem = [], f"; {type(e).__name__}: {e}"
     app = App()
+    if "bcf" not in formats:
+        msg = "The .bcf reader is not available" + problem
+        app.status.set(msg[:200])
+        app._append("!! " + msg)
     if "--smoke-test" in argv:  # build the window, then close it (used by packaging tests)
         app.root.after(300, app.destroy)
     app.mainloop()
